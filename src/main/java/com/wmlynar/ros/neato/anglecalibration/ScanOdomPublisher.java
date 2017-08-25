@@ -76,18 +76,30 @@ public class ScanOdomPublisher extends AbstractNodeMain {
 		Time time = connectedNode.getCurrentTime();
 		
 		odom.getHeader().setStamp(time);
-		odom.getPose().getPose().getPosition().setX(angleOdom);
-		odom.getPose().getPose().getPosition().setY(angleOdom);
+		odom.getPose().getPose().getOrientation().setX(angleOdom);
 		odomPublisher.publish(odom);
 
 		scan.getHeader().setStamp(time);
-		scan.getRanges()[180] = angleScan;
+		setAngle(scan.getRanges(),(int)angleScan);
 		scanPublisher.publish(scan);
 		
 		angleOdom += Math.random()*10-5;
-		angleScan += Math.random()*20-10;
+		angleScan += Math.random()*5-2.5;
 
 		Thread.sleep(10);
+	}
+	
+	private void setAngle(float ranges[], int angle) {
+		while(angle<0) {
+			angle += 360;
+		}
+		while(angle>359) {
+			angle -= 360;
+		}
+		for(int i=0; i< ranges.length; i++) {
+			ranges[i] = 0;
+		}
+		ranges[angle] = 2;
 	}
 
 }

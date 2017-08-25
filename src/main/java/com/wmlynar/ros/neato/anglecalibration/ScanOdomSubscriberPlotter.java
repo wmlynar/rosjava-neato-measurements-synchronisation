@@ -123,23 +123,18 @@ public class ScanOdomSubscriberPlotter extends AbstractNodeMain {
 	private void onOdomMessage(Odometry message) {
 		double timestamp = message.getHeader().getStamp().toSeconds();
 		
-		double valueX = message.getPose().getPose().getPosition().getX();
-		double valueY = message.getPose().getPose().getPosition().getY();
+		double valueX = message.getPose().getPose().getOrientation().getX();
 		
 		if(!isPrevSet) {
 			prevX = valueX;
-			prevY = valueY;
 			
 			isPrevSet = true;
 			return;
 		}
 
 		double dx = valueX-prevX;
-		double dy = valueY-prevY;
 		prevX = valueX;
-		prevY = valueY;
 		
-		distance += Math.sqrt(dx*dx+dy*dy);
 		double value = valueX;
 		
 		if(!isBias1Set) {
@@ -158,9 +153,9 @@ public class ScanOdomSubscriberPlotter extends AbstractNodeMain {
 		double timestamp = message.getHeader().getStamp().toSeconds();
 		
 		float[] ranges = message.getRanges();
-		float minRange = -10000000000000.f; // message.getRangeMin();
-		float maxRange = 100000000000000000.f; // message.getRangeMax();
-		float value = Utils.averageInBounds(Utils.getArray(ranges,178,182), minRange, maxRange, -1);
+		float minRange = 0.05f; // message.getRangeMin();
+		float maxRange = 5.f; // message.getRangeMax();
+		float value = Utils.getAngleOfNearest(ranges,minRange, maxRange, -1);
 		if(!isBias2Set) {
 			bias2 = value;
 			isBias2Set = true;

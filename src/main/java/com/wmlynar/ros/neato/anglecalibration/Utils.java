@@ -68,4 +68,16 @@ public class Utils {
 		}
 	}
 
+	public static float getAngleOfNearest(float[] ranges, float minRange, float maxRange, float otherwise) {
+		float angle = otherwise;
+		float distance = 1e6f;
+		for(int i=0; i<ranges.length; i++) {
+			if(ranges[i] < distance && ranges[i] > minRange && ranges[i] < maxRange) {
+				distance = ranges[i];
+				angle = i;
+			}
+		}
+		return angle;
+	}
+
 }
