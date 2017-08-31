@@ -39,7 +39,7 @@ public class ScanOdomPublisher extends AbstractNodeMain {
 	private float[] ranges;
 	private float angleOdom;
 	private float angleScan;
-
+	
 	@Override
 	public GraphName getDefaultNodeName() {
 		return GraphName.of("neato/fakeOdomScan");
@@ -60,8 +60,8 @@ public class ScanOdomPublisher extends AbstractNodeMain {
 		ranges = new float[360];
 		scan.setRanges(ranges);
 		
-		angleOdom = 252523.f;
-		angleScan = 7543235.f;
+		angleOdom = 0.f;
+		angleScan = 0.f;
 
 		connectedNode.executeCancellableLoop(new CancellableLoop() {
 			@Override
@@ -76,14 +76,15 @@ public class ScanOdomPublisher extends AbstractNodeMain {
 		Time time = connectedNode.getCurrentTime();
 		
 		odom.getHeader().setStamp(time);
-		odom.getPose().getPose().getOrientation().setX(angleOdom);
+		odom.getPose().getPose().getOrientation().setZ(angleOdom * Math.PI / 180);
+		odom.getPose().getPose().getOrientation().setW(1);
 		odomPublisher.publish(odom);
 
 		scan.getHeader().setStamp(time);
 		setAngle(scan.getRanges(),(int)angleScan);
 		scanPublisher.publish(scan);
 		
-		angleOdom += Math.random()*10-5;
+		angleOdom += Math.random()*1-0.5;
 		angleScan += Math.random()*5-2.5;
 
 		Thread.sleep(10);

@@ -19,6 +19,7 @@ package com.wmlynar.ros.neato.anglecalibration;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
+import org.apache.commons.net.nntp.NewGroupsOrNewsQuery;
 import org.jfree.ui.RefineryUtilities;
 import org.ros.message.MessageListener;
 import org.ros.namespace.GraphName;
@@ -49,9 +50,17 @@ public class ScanOdomSubscriberPlotter extends AbstractNodeMain {
 	private double distance = 0;
 	private double prevX;
 	private double prevY;
-	private boolean isPrevSet = false;
+	private boolean isPrevOdomSet = false;
+	private boolean isPrevScanSet = false;
 	
 	private boolean paused = false;
+	private double prevOdomTimestamp;
+	private double prevScanTimestamp;
+	private double prevOdom;
+	private float prevScan;
+	
+	private AverageFilter averageOdom = new AverageFilter();
+	private AverageFilter averageScan = new AverageFilter();
 
 	@Override
 	public GraphName getDefaultNodeName() {
@@ -123,26 +132,39 @@ public class ScanOdomSubscriberPlotter extends AbstractNodeMain {
 	private void onOdomMessage(Odometry message) {
 		double timestamp = message.getHeader().getStamp().toSeconds();
 		
-		double valueX = message.getPose().getPose().getOrientation().getX();
+		if(timestamp-prevOdomTimestamp < 0.2) {
+			return;
+		}
 		
-		if(!isPrevSet) {
-			prevX = valueX;
-			
-			isPrevSet = true;
+		double value = 180 / Math.PI * Utils.fromQuaternionToYaw(message.getPose().getPose().getOrientation());
+		
+		if(!isPrevOdomSet) {
+			prevOdom = value;
+			prevOdomTimestamp = timestamp;
+			isPrevOdomSet = true;
 			return;
 		}
 
-		double dx = valueX-prevX;
-		prevX = valueX;
+		float d = (float) ((value-prevOdom)/(timestamp-prevOdomTimestamp));
 		
-		double value = valueX;
+		prevOdom = value;
+		prevOdomTimestamp = timestamp;
+
+		averageOdom.add(d);
+		value = (float) averageOdom.get();
+//		value = d;
+		
+		if(value<-80) {
+			int i=0;
+		}
 		
 		if(!isBias1Set) {
 			bias1 = value;
 			distance = 0;
 			isBias1Set = true;
+			averageOdom.reset();
 		}
-		value -= bias1;
+		//value -= bias1;
 		if(!paused) {
 			plotter.addValues("odom",timestamp,value);
 			Utils.logCsv("target/odom",timestamp,value);
@@ -151,16 +173,43 @@ public class ScanOdomSubscriberPlotter extends AbstractNodeMain {
 	
 	private void onScanMessage(LaserScan message) {
 		double timestamp = message.getHeader().getStamp().toSeconds();
+
+		if(timestamp-prevScanTimestamp < 0.2) {
+			return;
+		}
 		
 		float[] ranges = message.getRanges();
 		float minRange = 0.05f; // message.getRangeMin();
 		float maxRange = 5.f; // message.getRangeMax();
-		float value = Utils.getAngleOfNearest(ranges,minRange, maxRange, -1);
+		float value = 359 - Utils.getAngleOfNearest(ranges,minRange, maxRange, -1);
+		
+		if(!isPrevScanSet) {
+			prevScan = value;
+			prevScanTimestamp = timestamp;
+			isPrevScanSet = true;
+			return;
+		}
+		
+		float d = (float) ((value-prevScan)/(timestamp-prevScanTimestamp));
+		
+		prevScan = value;
+		prevScanTimestamp = timestamp;
+
+		averageScan.add(d);
+		value = (float) averageScan.get();
+//		value = d;
+		
+		if(value > 40 || value < -40) {
+			return;
+		}
+		
 		if(!isBias2Set) {
+			prevScanTimestamp = timestamp;
 			bias2 = value;
 			isBias2Set = true;
+			averageScan.reset();
 		}
-		value-=bias2;
+		//value-=bias2;
 		if(!paused) {
 			plotter.addValues("scan",timestamp,value);
 			Utils.logCsv("target/scan",timestamp,value);

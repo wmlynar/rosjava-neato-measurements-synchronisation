@@ -61,7 +61,7 @@ public class XyTimePlotter extends ApplicationFrame{
 		this.maximumXRange = range;
 	}
 
-	public void addValues(String name, double x, double d) {
+	public synchronized void addValues(String name, double x, double d) {
 		XYSeries series = seriesMap.get(name);
 		if(series==null) {
 			series = new XYSeries(name);
@@ -71,10 +71,16 @@ public class XyTimePlotter extends ApplicationFrame{
 			seriesMap.put(name, series);
 			data.addSeries(series);
 		}
-		series.add(x, d);
-		if(this.maximumXRange>0) {
-			filterRange(series);
-		}
+		final XYSeries finalSeries = series; 
+		java.awt.EventQueue.invokeLater(new Runnable() {
+			@Override
+			public void run() {
+				finalSeries.add(x, d);
+				if(maximumXRange>0) {
+					filterRange(finalSeries);
+				}
+			}
+		});
 	}
 
 	private void filterRange(XYSeries series) {
@@ -83,7 +89,7 @@ public class XyTimePlotter extends ApplicationFrame{
 			return;
 		}
 		double lastX = series.getX(count - 1).doubleValue();
-		double minX = lastX - this.maximumXRange;
+		double minX = lastX - maximumXRange;
 		int minIndex = -1;
 		for(int i=0; i<count; i++) {
 			if(series.getX(i).doubleValue()<minX) {
